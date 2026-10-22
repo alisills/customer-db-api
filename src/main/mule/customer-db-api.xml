@@ -166,7 +166,7 @@ WHERE id = :id]]></db:sql>
 		</db:update>
 		<choice doc:name="Row Update?" doc:id="61fafc15-4929-4857-b440-ebb35fb46b74" >
 			<when expression="#[payload.affectedRows == 0]">
-				<raise-error doc:name="Raise error" doc:id="a18058ce-e64f-4e0e-b263-bc9d3bd7c41c" type='CUSTOMER:NOT_FOUND doc:name="NOT FOUND' description="#['Customer ' ++ vars.customerId ++ 'not found']"/>
+				<raise-error doc:name="Not Found" doc:id="a18058ce-e64f-4e0e-b263-bc9d3bd7c41c" type='CUSTOMER:NOT_FOUND' description="#['Customer ' ++ vars.customerId ++ 'not found']"/>
 			</when>
 		</choice>
 		<flow-ref doc:name="Read updated customer" doc:id="6ed012d9-aa87-4d67-82c0-485e832e6295" name="find-customer-flow"/>
@@ -180,6 +180,41 @@ toCustomer(payload[0])]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 		<error-handler ref="api-error-handler" />
+	</flow>
+	<flow name="delete-customer-flow" doc:id="85a420b8-61df-4473-a6ed-18f1ce5f5a3a" >
+		<http:listener doc:name="Listener" doc:id="87192e76-436d-4953-a244-ccacc5d41405" config-ref="HTTP_Listener_config" allowedMethods="GET" path="/customers/{id}">
+			<http:response statusCode="#[vars.httpStatus default 200]" />
+			<http:error-response statusCode="#[vars.httpStatus default 500]" >
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<set-variable value="#[attributes.uriParams.id]" doc:name="Save Customer ID" doc:id="b7d8b2b3-895f-401f-be81-444b95869cff" variableName="customerId"/>
+		<db:delete doc:name="Delete Customer" doc:id="84784b29-625f-4a52-a476-c9b4b2435c01" config-ref="Database_Config">
+			<db:sql ><![CDATA[DELETE FROM customers
+WHERE id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{id: vars.customerId}]]]></db:input-parameters>
+		</db:delete>
+		<choice doc:name="Row deleted?" doc:id="e06e4eba-816f-4f17-a073-f55ee982f40e" >
+			<when expression="#[payload.affectedRows == 0]">
+				<raise-error doc:name="Not Found" doc:id="961b9197-b5c8-4063-97f7-0d7d87582c90" type='"CUSTOMER:NOT_FOUND"' description="#['Customer ' ++ vars.customerId ++ 'not found']"/>
+			</when>
+		</choice>
+		<set-variable value="#[204]" doc:name="Status 204" doc:id="54143df0-97e0-4ac6-9721-01c20efc32db" variableName="httpStatus"/>
+		<set-payload value="#['']" doc:name="Empty Body" doc:id="94d04666-ea28-46ac-aa45-77715d1d122f" />
+		<error-handler ref="api-error-handler" />
+	</flow>
+	<flow name="find-customer-flow" doc:id="dec3a54b-f8fa-4b56-854c-b4ec154ee8db" >
+		<db:select doc:name="Select customer by ID" doc:id="d74d03b5-49a1-4d39-948d-fdfb03a90c90" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT id, first_name, last_name, email, phone, city
+FROM customers
+WHERE id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{id: vars.customerId}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Found?" doc:id="588b4aa4-5ba1-4ba9-b57b-df6b99e26333" >
+			<when expression="#[isEmpty(payload)]">
+				<raise-error doc:name="Not Found" doc:id="bfa008e8-0093-4cb7-b8db-042ea33bc64b" type='"CUSTOMER:NOT_FOUND" ' description="#['Customer ' ++ vars.customerId ++ ' not found']"/>
+			</when>
+		</choice>
 	</flow>
 	<error-handler name="api-error-handler" doc:id="45b4249a-68d2-4ff9-96a0-48ed9bbc3942" />
 </mule>
