@@ -131,5 +131,55 @@ vars.newCustomer]]></ee:set-payload>
 		</ee:transform>
 		<error-handler ref="api-error-handler" />
 	</flow>
+	<flow name="update-customer-flow" doc:id="44a2977f-01c1-4358-a0f6-bb60eeeb0e10" >
+		<http:listener doc:name="Listener" doc:id="2e4063d7-533b-4379-99a6-d2a843fe78e5" config-ref="HTTP_Listener_config" path="/customers/{id}" allowedMethods="PUT">
+			<http:response statusCode="#[vars.httpStatus default 200]" />
+			<http:error-response statusCode="#[vars.httpStatus default 500]" >
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<set-variable value="#[attributes.uriParams.id]" doc:name="Save Customer ID" doc:id="9f7ca3b6-5f42-4c90-9c19-e79a247217e9" variableName="customerId"/>
+		<flow-ref doc:name="Validate Request" doc:id="9adea147-d77b-41d4-95b4-db3942f6dc12" name="validate-customer-subflow"/>
+		<db:select doc:name="Email Used by Another Customer?" doc:id="f0d2ad17-2c45-4823-b499-3d7663f9b7d0" config-ref="Database_Config" target="existingCustomers">
+			<db:sql ><![CDATA[SELECT id
+FROM customers
+WHERE email = :email AND id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{email: lower(payload.email), id: vars.customerId}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Duplicate?" doc:id="657b67df-4365-4f51-90fe-82d76ce44651" >
+			<when expression="#[not isEmpty(vars.exisitngCustomers)]">
+				<raise-error doc:name="Duplicate" doc:id="69261c8a-8cfa-4422-8cfd-81a920922c8a" type="CUSTOMER:DUPLICATE" description="#['A customer with email ' ++ lower(payload.email) ++ ' already exists']"/>
+			</when>
+		</choice>
+		<db:update doc:name="Update Customer" doc:id="ad14e611-e823-4d15-ab3f-3a4b1c59d062" config-ref="Database_Config">
+			<db:sql ><![CDATA[UPDATE customers
+SET first_name = :firstName, last_name = :lastName, email = :email, phone = :phone, city = :city
+WHERE id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: vars.customerId,
+	firstName: payload.firstName,
+	lastName: payload.lastName,
+	email: lower(payload.email),
+	phone: payload.phone default "",
+	city: payload.city default ""
+}]]]></db:input-parameters>
+		</db:update>
+		<choice doc:name="Row Update?" doc:id="61fafc15-4929-4857-b440-ebb35fb46b74" >
+			<when expression="#[payload.affectedRows == 0]">
+				<raise-error doc:name="Raise error" doc:id="a18058ce-e64f-4e0e-b263-bc9d3bd7c41c" type='CUSTOMER:NOT_FOUND doc:name="NOT FOUND' description="#['Customer ' ++ vars.customerId ++ 'not found']"/>
+			</when>
+		</choice>
+		<flow-ref doc:name="Read updated customer" doc:id="6ed012d9-aa87-4d67-82c0-485e832e6295" name="find-customer-flow"/>
+		<ee:transform doc:name="Row to Customer" doc:id="7b857988-2eed-46f0-b90e-aa72a59ba0f7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import toCustomer from modules::CustomerMapping
+output application/json
+---
+toCustomer(payload[0])]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler ref="api-error-handler" />
+	</flow>
 	<error-handler name="api-error-handler" doc:id="45b4249a-68d2-4ff9-96a0-48ed9bbc3942" />
 </mule>
