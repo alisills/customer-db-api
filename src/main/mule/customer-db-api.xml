@@ -54,5 +54,40 @@ payload map ((row) -> toCustomer(row))]]></ee:set-payload>
 		</ee:transform>
 		<error-handler ref="api-error-handler" />
 	</flow>
+	<flow name="get-customer-by-id-flow" doc:id="f13d2707-df9e-4ff9-89ed-99dd75ab71d3" >
+		<http:listener doc:name="GET /customer/{id}" doc:id="02bc39cd-6f11-4540-be45-f9a75df11204" config-ref="HTTP_Listener_config" path="/customer/{id}" allowedMethods="GET">
+			<http:response statusCode="#[vars.httpStatus default 200]" />
+			<http:error-response statusCode="#[vars.httpStatus default 500]" >
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<set-variable value="#[attributes.uriParams.id]" doc:name="Save Customer ID" doc:id="bf923a1f-2095-4aac-82c4-3de0664a69c9" variableName="customerId"/>
+		<flow-ref doc:name="Find Customer" doc:id="06a916e0-02a4-4e8e-a8bb-0932f6e1a275" name='"find-customer-flow"'/>
+		<ee:transform doc:name="Row to Customer" doc:id="99dc0537-4c03-47e2-af8d-976251893eb9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import toCustomer from modules::CustomerMapping
+output application/json
+---
+toCustomer(payload[0])]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler ref="api-error-handler" />
+	</flow>
+	<flow name="create-customer-flow" doc:id="7cc26ad6-f2f8-43e7-81b0-904447d7f038" >
+		<http:listener doc:name="Listener" doc:id="2ffdaf1f-5b49-48df-bf2c-54dbfb71ec99" config-ref="HTTP_Listener_config" path="/customers" allowedMethods="POST">
+			<http:response statusCode="#[vars.httpSatus default 200]" />
+			<http:error-response statusCode="#[vars.httpStatus default 500]" >
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<flow-ref doc:name="Validate Request" doc:id="470ed68e-f335-4000-aac6-0a8b33fd9c11" name="validate-customer-subflow"/>
+		<db:select doc:name="Find by Email" doc:id="a801f15b-fdff-47fa-b979-2e82be0283dc" config-ref="Database_Config" target="exisitingCustomers">
+			<db:sql ><![CDATA[SELECT id
+FROM customers
+WHERE email = :email]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{email: lower(payload.email)}]]]></db:input-parameters>
+		</db:select>
+	</flow>
 	<error-handler name="api-error-handler" doc:id="45b4249a-68d2-4ff9-96a0-48ed9bbc3942" />
 </mule>
