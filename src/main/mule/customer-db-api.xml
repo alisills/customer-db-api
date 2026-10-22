@@ -1,10 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
-	<flow name="customer-db-apiFlow" doc:id="416bffc9-c9a4-4f7b-8e2f-50de7d49aac7" >
-		<db:select doc:name="Select" doc:id="1bb84dfa-96df-4d53-8e54-ceb55d8cc350" />
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="get-customers-flow" doc:id="416bffc9-c9a4-4f7b-8e2f-50de7d49aac7" >
+		<http:listener doc:name="Listener" doc:id="71ec26af-17da-4396-84ac-0abf4570f230" config-ref="HTTP_Listener_config" path="/customers" allowedMethods="GET">
+			<http:response statusCode="#[vars.httpStatus default 200]" />
+			<http:error-response statusCode="#[vars.httpStaus default 500]" >
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<choice doc:name="City Filter?" doc:id="f4e532e7-a9ab-4bc3-818c-26ac3e63ae72" >
+			<when expression="#[isEmpty(attributes.queryParams.city)]">
+				<db:select doc:name="Select All Customers" doc:id="a535ec89-af8f-484b-8c4f-00b03a565d7c" config-ref="Database_Config">
+					<db:sql ><![CDATA[SELECT
+	id,
+	first_name,
+	last_name,
+	email,
+	phone,
+	city
+FROM customers
+ORDER BY last_name, first_name]]></db:sql>
+				</db:select>
+			</when>
+			<otherwise >
+				<db:select doc:name="Select Customers by City" doc:id="35b83bb8-01bc-49bf-a6f1-43739eb353e3" config-ref="Database_Config">
+					<db:sql ><![CDATA[SELECT
+	id,
+	first_name,
+	last_name,
+	email,
+	phone,
+	city
+FROM customers
+WHERE LOWER(city) = LOWER(:city)
+ORDER BY last_name, first_name]]></db:sql>
+					<db:input-parameters ><![CDATA[{city: attributes.queryParams}]]></db:input-parameters>
+				</db:select>
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="Rows to customers" doc:id="bd589311-24ce-4c56-b6df-63b68731ddd9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import toCustomer from modules::CustomerMapping
+output application/json
+---
+payload map ((row) -> toCustomer(row))]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler ref="api-error-handler" />
 	</flow>
+	<error-handler name="api-error-handler" doc:id="45b4249a-68d2-4ff9-96a0-48ed9bbc3942" />
 </mule>
