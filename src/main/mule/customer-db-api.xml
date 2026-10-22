@@ -88,6 +88,48 @@ FROM customers
 WHERE email = :email]]></db:sql>
 			<db:input-parameters ><![CDATA[#[{email: lower(payload.email)}]]]></db:input-parameters>
 		</db:select>
+		<choice doc:name="Duplicate?" doc:id="148a3024-bc19-44c5-98e8-373653e77c24" >
+			<when expression="#[not isEmpty(vars.existingCustomers)]">
+				<raise-error doc:name="Duplicate" doc:id="c06bdf66-a817-416a-b20c-c17e72af69a1" type="CUSTOMER:DUPLICATE" description="#['A customer with email ' ++ lower(payload.email) ++ ' already exists']"/>
+			</when>
+		</choice>
+		<ee:transform doc:name="Build New Customer" doc:id="e6e6e529-62b6-40f0-9f59-7cea507122a0">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+					</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="newCustomer" ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	id: "C" ++ (uuid()[0 to 7]),
+	firstName: payload.firstName,
+	lastName: payload.lastName,
+	email: lower(payload.email),
+	phone: payload.phone default "",
+	city: payload.city default ""
+}]]></ee:set-variable>
+			</ee:variables>
+				</ee:transform>
+		<db:insert doc:name="Insert Customer" doc:id="fb5b92b4-eff9-4a01-98d6-c599377a013c" config-ref="Database_Config">
+			<db:sql ><![CDATA[INSERT INTO cusomters (id, first_name, last_name, email, phone, city)
+VALUES (:id, :firstName, :lastName, :email, :phone, :city)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[vars.newCustomer]]]></db:input-parameters>
+		</db:insert>
+		<set-variable value="#[201]" doc:name="Status 201" doc:id="951ac863-7ad3-4f83-b64b-594551acfbad" variableName="httpStatus"/>
+		<ee:transform doc:name="Respond With Customer" doc:id="12857cc8-3328-4257-94e9-e3ae1e3b2550" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.newCustomer]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler ref="api-error-handler" />
 	</flow>
 	<error-handler name="api-error-handler" doc:id="45b4249a-68d2-4ff9-96a0-48ed9bbc3942" />
 </mule>
