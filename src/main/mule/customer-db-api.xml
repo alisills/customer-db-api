@@ -216,5 +216,43 @@ WHERE id = :id]]></db:sql>
 			</when>
 		</choice>
 	</flow>
+	<sub-flow name="validate-customer-subflow" doc:id="c1b0ae2b-5975-44fe-ba75-1069cbffa4b9" >
+		<ee:transform doc:name="Collect Validation Errors" doc:id="3b5102ce-c644-4727-a110-50f933fbfd50" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="validationErrors" ><![CDATA[%dw 2.0
+output application/java
+var requiredFields = ["firstName", "lastName", "email"]
+var missing = requiredFields filter ((field) -> isEmpty(payload[field]))
+var emailPatter = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+---
+(missing map ((field) -> field ++ " is required"))
+	++ (if ((not isEmpty(payload.email)) and (not (payload.email matches emailPattern)))
+		["email is not a valid address"]
+		else [])]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<choice doc:name="Any Errors" doc:id="55afb5e1-b35d-4740-bef5-92f02134560e" >
+			<when expression="#[not isEmpty(vars.validationErrors)]">
+				<raise-error doc:name="Invalid Request" doc:id="6efddab9-72c1-4430-8c7c-2f2e8d33bc2a" type='"CUSTOMER:INVALID_REQUEST"' description="#[vars.validationErrors joinBy ';  ']"/>
+			</when>
+		</choice>
+	</sub-flow>
+	<sub-flow name="build-error-response-subflow" doc:id="44a2d7ac-2bfe-4c89-aa14-20b9955f121f" >
+		<ee:transform doc:name="Error JSON" doc:id="2e96b555-c8a2-4df4-8aab-2a89523af189" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	status: "ERROR",
+	errorCode: vars.errorCode,
+	message: vars.errorMessage,
+	correlationId: correlationId
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
 	<error-handler name="api-error-handler" doc:id="45b4249a-68d2-4ff9-96a0-48ed9bbc3942" />
 </mule>
