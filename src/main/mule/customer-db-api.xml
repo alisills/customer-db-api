@@ -191,7 +191,7 @@ WHERE id = :id]]></db:sql>
 		</db:delete>
 		<choice doc:name="Row deleted?" doc:id="e06e4eba-816f-4f17-a073-f55ee982f40e" >
 			<when expression="#[payload.affectedRows == 0]">
-				<raise-error doc:name="Not Found" doc:id="961b9197-b5c8-4063-97f7-0d7d87582c90" type='"CUSTOMER:NOT_FOUND"' description="#['Customer ' ++ vars.customerId ++ 'not found']"/>
+				<raise-error doc:name="Not Found" doc:id="961b9197-b5c8-4063-97f7-0d7d87582c90" type='CUSTOMER:NOT_FOUND' description="#['Customer ' ++ vars.customerId ++ 'not found']"/>
 			</when>
 		</choice>
 		<set-variable value="#[204]" doc:name="Status 204" doc:id="54143df0-97e0-4ac6-9721-01c20efc32db" variableName="httpStatus"/>
@@ -207,7 +207,7 @@ WHERE id = :id]]></db:sql>
 		</db:select>
 		<choice doc:name="Found?" doc:id="588b4aa4-5ba1-4ba9-b57b-df6b99e26333" >
 			<when expression="#[isEmpty(payload)]">
-				<raise-error doc:name="Not Found" doc:id="bfa008e8-0093-4cb7-b8db-042ea33bc64b" type='"CUSTOMER:NOT_FOUND" ' description="#['Customer ' ++ vars.customerId ++ ' not found']"/>
+				<raise-error doc:name="Not Found" doc:id="bfa008e8-0093-4cb7-b8db-042ea33bc64b" type='CUSTOMER:NOT_FOUND' description="#['Customer ' ++ vars.customerId ++ ' not found']"/>
 			</when>
 		</choice>
 	</flow>
@@ -230,7 +230,7 @@ var emailPatter = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 		</ee:transform>
 		<choice doc:name="Any Errors" doc:id="55afb5e1-b35d-4740-bef5-92f02134560e" >
 			<when expression="#[not isEmpty(vars.validationErrors)]">
-				<raise-error doc:name="Invalid Request" doc:id="6efddab9-72c1-4430-8c7c-2f2e8d33bc2a" type='"CUSTOMER:INVALID_REQUEST"' description="#[vars.validationErrors joinBy ';  ']"/>
+				<raise-error doc:name="Invalid Request" doc:id="6efddab9-72c1-4430-8c7c-2f2e8d33bc2a" type='CUSTOMER:INVALID_REQUEST' description="#[vars.validationErrors joinBy ';  ']"/>
 			</when>
 		</choice>
 	</sub-flow>
@@ -256,13 +256,13 @@ output application/json
 			<set-variable value="#[error.description]" doc:name="errorMessage" doc:id="6b0274d3-f909-4fb6-881d-fe20d69b0407" variableName="errorMessage"/>
 			<flow-ref doc:name="build-error-response-subflow" doc:id="3557730e-8ed4-4c50-ac80-b34afd6df0f3" name="build-error-response-subflow"/>
 		</on-error-propagate>
-		<on-error-propagate enableNotifications="true" logException="false" doc:name="On Error Propagate" doc:id="df584cc4-4437-4aa6-aa25-20b2c7470bca" type='"CUSTOMER:INVALID_REQUEST'>
+		<on-error-propagate enableNotifications="true" logException="false" doc:name="On Error Propagate" doc:id="df584cc4-4437-4aa6-aa25-20b2c7470bca" type='CUSTOMER:INVALID_REQUEST'>
 			<set-variable value="#[400]" doc:name="httpStatus 400" doc:id="2a8bd786-55ad-4680-83b6-708e2c6b1cfc" variableName="httpStatus"/>
 			<set-variable value="INVALID_REQUEST" doc:name="errorCode" doc:id="1fad6f8e-10f9-4688-b7b6-30419c662f93" variableName="errorCode"/>
 			<set-variable value="#[error.description]" doc:name="errorMessage" doc:id="bbd5b927-50a4-49c7-9415-db7fa5fec8d2" variableName="errorMessage"/>
 			<flow-ref doc:name="build-error-response-subflow" doc:id="f81988e8-8f93-4320-83da-91efb01ddaa3" name="build-error-response-subflow"/>
 		</on-error-propagate>
-		<on-error-propagate enableNotifications="true" logException="false" doc:name="On Error Propagate" doc:id="1d205389-5175-4214-aa13-fd64a63ddf26" type='"CUSTOMER:DUPLICATE'>
+		<on-error-propagate enableNotifications="true" logException="false" doc:name="On Error Propagate" doc:id="1d205389-5175-4214-aa13-fd64a63ddf26" type='CUSTOMER:DUPLICATE'>
 			<set-variable value="#[400]" doc:name="httpStatus 400" doc:id="7e09a2b7-495d-4f63-833e-b9603bc15864" variableName="httpStatus"/>
 			<set-variable value="DUPLICATE_CUSTOMER" doc:name="errorCode" doc:id="9b29badc-d727-49b1-8b2d-ce925911c0df" variableName="errorCode"/>
 			<set-variable value="#[error.description]" doc:name="errorMessage" doc:id="b316757f-2c0e-4b80-932e-6e5906a73896" variableName="errorMessage"/>
