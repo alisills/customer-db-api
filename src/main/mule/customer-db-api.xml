@@ -39,7 +39,7 @@ ORDER BY last_name, first_name]]></db:sql>
 FROM customers
 WHERE LOWER(city) = LOWER(:city)
 ORDER BY last_name, first_name]]></db:sql>
-					<db:input-parameters ><![CDATA[{city: attributes.queryParams}]]></db:input-parameters>
+					<db:input-parameters ><![CDATA[#[{city: attributes.queryParams.city}]]]></db:input-parameters>
 				</db:select>
 			</otherwise>
 		</choice>
@@ -55,7 +55,7 @@ payload map ((row) -> toCustomer(row))]]></ee:set-payload>
 		<error-handler ref="api-error-handler" />
 	</flow>
 	<flow name="get-customer-by-id-flow" doc:id="f13d2707-df9e-4ff9-89ed-99dd75ab71d3" >
-		<http:listener doc:name="GET /customer/{id}" doc:id="02bc39cd-6f11-4540-be45-f9a75df11204" config-ref="HTTP_Listener_config" path="/customer/{id}" allowedMethods="GET">
+		<http:listener doc:name="GET /customer/{id}" doc:id="02bc39cd-6f11-4540-be45-f9a75df11204" config-ref="HTTP_Listener_config" path="/customers/{id}" allowedMethods="GET">
 			<http:response statusCode="#[vars.httpStatus default 200]" />
 			<http:error-response statusCode="#[vars.httpStatus default 500]" >
 				<http:body ><![CDATA[#[payload]]]></http:body>
@@ -75,7 +75,7 @@ toCustomer(payload[0])]]></ee:set-payload>
 		<error-handler ref="api-error-handler" />
 	</flow>
 	<flow name="create-customer-flow" doc:id="7cc26ad6-f2f8-43e7-81b0-904447d7f038" >
-		<http:listener doc:name="Listener" doc:id="2ffdaf1f-5b49-48df-bf2c-54dbfb71ec99" config-ref="HTTP_Listener_config" path="/customers" allowedMethods="POST">
+		<http:listener doc:name="POST /customers" doc:id="2ffdaf1f-5b49-48df-bf2c-54dbfb71ec99" config-ref="HTTP_Listener_config" path="/customers" allowedMethods="POST">
 			<http:response statusCode="#[vars.httpSatus default 200]" />
 			<http:error-response statusCode="#[vars.httpStatus default 500]" >
 				<http:body ><![CDATA[#[payload]]]></http:body>
@@ -111,7 +111,7 @@ output application/java
 			</ee:variables>
 				</ee:transform>
 		<db:insert doc:name="Insert Customer" doc:id="fb5b92b4-eff9-4a01-98d6-c599377a013c" config-ref="Database_Config">
-			<db:sql ><![CDATA[INSERT INTO cusomters (id, first_name, last_name, email, phone, city)
+			<db:sql ><![CDATA[INSERT INTO customers (id, first_name, last_name, email, phone, city)
 VALUES (:id, :firstName, :lastName, :email, :phone, :city)]]></db:sql>
 			<db:input-parameters ><![CDATA[#[vars.newCustomer]]]></db:input-parameters>
 		</db:insert>
@@ -177,7 +177,7 @@ toCustomer(payload[0])]]></ee:set-payload>
 		<error-handler ref="api-error-handler" />
 	</flow>
 	<flow name="delete-customer-flow" doc:id="85a420b8-61df-4473-a6ed-18f1ce5f5a3a" >
-		<http:listener doc:name="Listener" doc:id="87192e76-436d-4953-a244-ccacc5d41405" config-ref="HTTP_Listener_config" allowedMethods="GET" path="/customers/{id}">
+		<http:listener doc:name="Listener" doc:id="87192e76-436d-4953-a244-ccacc5d41405" config-ref="HTTP_Listener_config" allowedMethods="DELETE" path="/customers/{id}">
 			<http:response statusCode="#[vars.httpStatus default 200]" />
 			<http:error-response statusCode="#[vars.httpStatus default 500]" >
 				<http:body ><![CDATA[#[payload]]]></http:body>
@@ -220,7 +220,7 @@ WHERE id = :id]]></db:sql>
 output application/java
 var requiredFields = ["firstName", "lastName", "email"]
 var missing = requiredFields filter ((field) -> isEmpty(payload[field]))
-var emailPatter = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+var emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 ---
 (missing map ((field) -> field ++ " is required"))
 	++ (if ((not isEmpty(payload.email)) and (not (payload.email matches emailPattern)))
