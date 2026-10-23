@@ -62,7 +62,7 @@ payload map ((row) -> toCustomer(row))]]></ee:set-payload>
 			</http:error-response>
 		</http:listener>
 		<set-variable value="#[attributes.uriParams.id]" doc:name="Save Customer ID" doc:id="bf923a1f-2095-4aac-82c4-3de0664a69c9" variableName="customerId"/>
-		<flow-ref doc:name="Find Customer" doc:id="06a916e0-02a4-4e8e-a8bb-0932f6e1a275" name='"find-customer-flow"'/>
+		<flow-ref doc:name="Find Customer" doc:id="06a916e0-02a4-4e8e-a8bb-0932f6e1a275" name='find-customer-flow'/>
 		<ee:transform doc:name="Row to Customer" doc:id="99dc0537-4c03-47e2-af8d-976251893eb9" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
@@ -95,11 +95,6 @@ WHERE email = :email]]></db:sql>
 		</choice>
 		<ee:transform doc:name="Build New Customer" doc:id="e6e6e529-62b6-40f0-9f59-7cea507122a0">
 					<ee:message>
-						<ee:set-payload><![CDATA[%dw 2.0
-output application/java
----
-{
-}]]></ee:set-payload>
 					</ee:message>
 			<ee:variables >
 				<ee:set-variable variableName="newCustomer" ><![CDATA[%dw 2.0
@@ -254,5 +249,36 @@ output application/json
 			</ee:message>
 		</ee:transform>
 	</sub-flow>
-	<error-handler name="api-error-handler" doc:id="45b4249a-68d2-4ff9-96a0-48ed9bbc3942" />
+	<error-handler name="api-error-handler" doc:id="45b4249a-68d2-4ff9-96a0-48ed9bbc3942" >
+		<on-error-propagate enableNotifications="true" logException="false" doc:name="On Error Propagate" doc:id="2225013e-d535-43d2-ad7e-1d51f1efaac3" type="CUSTOMER:NOT_FOUND">
+			<set-variable value="#[404]" doc:name="httpStatus 404" doc:id="ea41e15c-282e-4072-b729-1edcc8a0b0ac" variableName="httpStatus"/>
+			<set-variable value="CUSTOMER_NOT_FOUND" doc:name="errorCode" doc:id="fe485103-a567-48b7-b71d-adbf2f6f89dd" variableName="errorCode"/>
+			<set-variable value="#[error.description]" doc:name="errorMessage" doc:id="6b0274d3-f909-4fb6-881d-fe20d69b0407" variableName="errorMessage"/>
+			<flow-ref doc:name="build-error-response-subflow" doc:id="3557730e-8ed4-4c50-ac80-b34afd6df0f3" name="build-error-response-subflow"/>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="false" doc:name="On Error Propagate" doc:id="df584cc4-4437-4aa6-aa25-20b2c7470bca" type='"CUSTOMER:INVALID_REQUEST'>
+			<set-variable value="#[400]" doc:name="httpStatus 400" doc:id="2a8bd786-55ad-4680-83b6-708e2c6b1cfc" variableName="httpStatus"/>
+			<set-variable value="INVALID_REQUEST" doc:name="errorCode" doc:id="1fad6f8e-10f9-4688-b7b6-30419c662f93" variableName="errorCode"/>
+			<set-variable value="#[error.description]" doc:name="errorMessage" doc:id="bbd5b927-50a4-49c7-9415-db7fa5fec8d2" variableName="errorMessage"/>
+			<flow-ref doc:name="build-error-response-subflow" doc:id="f81988e8-8f93-4320-83da-91efb01ddaa3" name="build-error-response-subflow"/>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="false" doc:name="On Error Propagate" doc:id="1d205389-5175-4214-aa13-fd64a63ddf26" type='"CUSTOMER:DUPLICATE'>
+			<set-variable value="#[400]" doc:name="httpStatus 400" doc:id="7e09a2b7-495d-4f63-833e-b9603bc15864" variableName="httpStatus"/>
+			<set-variable value="DUPLICATE_CUSTOMER" doc:name="errorCode" doc:id="9b29badc-d727-49b1-8b2d-ce925911c0df" variableName="errorCode"/>
+			<set-variable value="#[error.description]" doc:name="errorMessage" doc:id="b316757f-2c0e-4b80-932e-6e5906a73896" variableName="errorMessage"/>
+			<flow-ref doc:name="build-error-response-subflow" doc:id="140d2890-44aa-4802-9499-d2fd70db3052" name="build-error-response-subflow"/>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="false" doc:name="On Error Propagate" doc:id="b3ad9716-8d4e-4eb7-9031-1cfaa2fce6d5" type="DB:CONNECTIVITY">
+			<set-variable value="#[503]" doc:name="httpStatus 503" doc:id="a7c0bd7d-4335-49e6-aeea-3becde996102" variableName="httpStatus"/>
+			<set-variable value="DATABASE_UNAVAILABLE" doc:name="errorCode" doc:id="3abc62d9-d7f9-4beb-9dbe-5189956b3b8d" variableName="errorCode"/>
+			<set-variable value='The customer database is temporarily unavailable.' doc:name="errorMessage" doc:id="3f6de37a-7217-4bc2-92a5-fa8be901126c" variableName="errorMessage"/>
+			<flow-ref doc:name="build-error-response-subflow" doc:id="68920491-516c-4564-a1f1-2552cf698743" name="build-error-response-subflow"/>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="false" doc:name="On Error Propagate" doc:id="901413a3-d1e6-4a41-a039-7768224aa13a" type="ANY">
+			<set-variable value="#[500]" doc:name="httpStatus 500" doc:id="8be40233-ac15-4138-bcbc-3ddad2205cb0" variableName="httpStatus"/>
+			<set-variable value="INTERNAL_ERROR" doc:name="errorCode" doc:id="006f2215-cc11-41e7-844e-203e8f341cc4" variableName="errorCode"/>
+			<set-variable value="An unexpected error occcured" doc:name="errorMessage" doc:id="a8fc098d-0d3e-493a-a8c1-421721b797b8" variableName="errorMessage"/>
+			<flow-ref doc:name="build-error-response-subflow" doc:id="8a31ff33-75a9-4d5f-a3fc-b812069d0c34" name="build-error-response-subflow"/>
+		</on-error-propagate>
+	</error-handler>
 </mule>
